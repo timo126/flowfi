@@ -10,8 +10,6 @@ import {
   STELLAR_NETWORK_ID,
 } from "./wallet";
 
-// ── STELLAR_NETWORK / STELLAR_NETWORK_ID ────────────────────────────────────
-
 describe("STELLAR_NETWORK", () => {
   it("defaults to TESTNET", () => {
     expect(STELLAR_NETWORK).toBe("TESTNET");
@@ -21,8 +19,6 @@ describe("STELLAR_NETWORK", () => {
     expect(STELLAR_NETWORK_ID).toContain("Test SDF Network");
   });
 });
-
-// ── SUPPORTED_WALLETS ──────────────────────────────────────────────────────
 
 describe("SUPPORTED_WALLETS", () => {
   it("contains freighter", () => {
@@ -39,8 +35,6 @@ describe("SUPPORTED_WALLETS", () => {
   });
 });
 
-// ── FreighterNotInstalledError ─────────────────────────────────────────────
-
 describe("FreighterNotInstalledError", () => {
   it("is an instance of Error", () => {
     const err = new FreighterNotInstalledError();
@@ -49,8 +43,6 @@ describe("FreighterNotInstalledError", () => {
     expect(err.message).toContain("Freighter");
   });
 });
-
-// ── toWalletErrorMessage ───────────────────────────────────────────────────
 
 describe("toWalletErrorMessage", () => {
   it("returns specialized message for FreighterNotInstalledError", () => {
@@ -96,9 +88,61 @@ describe("toWalletErrorMessage", () => {
       );
     }
   });
-});
 
-// ── shortenPublicKey ───────────────────────────────────────────────────────
+  it("handles user rejection with /rejected/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("Transaction rejected"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /declined/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("User declined the request"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /denied/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("Access denied by user"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /canceled/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("Connection canceled"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /cancelled/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("User cancelled the request"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /closed/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("Popup closed by user"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /window.*closed/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("Window closed"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /user.*denied/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("User denied permission"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+
+  it("handles user rejection with /user.*abort/i pattern", () => {
+    expect(toWalletErrorMessage(new Error("User aborted the operation"))).toBe(
+      "You rejected the connection request. Try again when ready."
+    );
+  });
+});
 
 describe("shortenPublicKey", () => {
   it("shortens a long key", () => {
@@ -113,9 +157,12 @@ describe("shortenPublicKey", () => {
     const short = "GCXYZ";
     expect(shortenPublicKey(short)).toBe(short);
   });
-});
 
-// ── formatNetwork ──────────────────────────────────────────────────────────
+  it("returns key exactly 14 chars unchanged", () => {
+    const key = "GCXYZ123456789";
+    expect(shortenPublicKey(key)).toBe(key);
+  });
+});
 
 describe("formatNetwork", () => {
   it("maps mainnet passphrase to 'Mainnet'", () => {
@@ -141,13 +188,18 @@ describe("formatNetwork", () => {
   it("returns original for unknown networks", () => {
     expect(formatNetwork("custom-network")).toBe("custom-network");
   });
+
+  it("maps 'Public' (uppercase) to 'Mainnet'", () => {
+    expect(formatNetwork("Public")).toBe("Mainnet");
+  });
+
+  it("maps 'TESTNET' (uppercase) to 'Testnet'", () => {
+    expect(formatNetwork("TESTNET")).toBe("Testnet");
+  });
 });
 
-// ── isExpectedNetwork ──────────────────────────────────────────────────────
-
 describe("isExpectedNetwork", () => {
-  it("returns true when session matches expected network", () => {
-    // Default env is TESTNET
+  it("returns true when session matches expected network (default TESTNET)", () => {
     expect(isExpectedNetwork("Test SDF Network ; September 2015")).toBe(true);
     expect(isExpectedNetwork("testnet")).toBe(true);
   });
@@ -155,5 +207,13 @@ describe("isExpectedNetwork", () => {
   it("returns false when session does not match expected network", () => {
     expect(isExpectedNetwork("Public Global Stellar Network ; September 2015")).toBe(false);
     expect(isExpectedNetwork("mainnet")).toBe(false);
+  });
+
+  it("returns false when session is mainnet but env is testnet", () => {
+    expect(isExpectedNetwork("mainnet")).toBe(false);
+  });
+
+  it("returns true when session is testnet and env is testnet", () => {
+    expect(isExpectedNetwork("Test SDF Network ; September 2015")).toBe(true);
   });
 });
